@@ -1,0 +1,4 @@
+WORKDIR /app
+COPY . /app
+RUN echo "Hello from Docksmith"
+CMD ["python", "main.py"]
