@@ -44,9 +44,14 @@ def interactive_shell():
                 print("Error: Image must be in format name:tag")
             else:
                 run_container(parts[1])
+        
+        elif command == "ps":
+            from runtime.container_manager import list_containers
+            list_containers()
 
         else:
-            print("Unknown command")
+            print(f"Unknown command: {command}")
+            print("Try: build, run, images, rmi, ps")
 
 def main():
     import argparse

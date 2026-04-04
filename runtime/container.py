@@ -3,8 +3,10 @@ import tarfile
 import tempfile
 import shutil
 import subprocess
+import sys
 
 from image.layer_system import load_manifest, LAYERS_DIR
+from runtime.container_manager import add_container, stop_container
 
 
 def extract_layer(layer_digest, rootfs):
@@ -22,7 +24,6 @@ def build_rootfs(manifest):
         extract_layer(layer["digest"], rootfs)
 
     return rootfs
-
 
 def run_container(image):
 
@@ -50,17 +51,41 @@ def run_container(image):
 
     print(f"\nRunning container: {image}\n")
 
-    # 🔴 ADD THIS DEBUG BLOCK HERE
-    print("\n--- DEBUG: rootfs contents ---")
-    for root, dirs, files in os.walk(rootfs):
-        print(root)
-        for f in files:
-            print("   ", f)
+    cid = add_container(image)
+    print(f"Container ID: {cid}")
 
-    print("\n--- END DEBUG ---\n")
+    # -----------------------------
+    # ISOLATED EXECUTION
+    # -----------------------------
+    pid = os.fork()
 
-    # Run command
-    subprocess.run(cmd, cwd=abs_workdir, env=env)
+    if pid == 0:
+        try:
+            print("Running inside isolated environment...\n")
+
+            # Fix command paths
+            fixed_cmd = []
+            for part in cmd:
+                if part.endswith(".py"):
+                    fixed_cmd.append(os.path.join(rootfs, workdir.lstrip("/"), part))
+                else:
+                    fixed_cmd.append(part)
+
+            subprocess.run(
+                fixed_cmd,
+                cwd=abs_workdir,
+                env=env
+            )
+
+            os._exit(0)
+
+        except Exception as e:
+            print("Error in container:", e)
+            os._exit(1)
+
+    else:
+        os.wait()
+        stop_container(cid)
 
     # Cleanup
     shutil.rmtree(rootfs)

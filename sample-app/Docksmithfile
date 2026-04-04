@@ -1,4 +1,4 @@
 WORKDIR /app
 COPY . /app
 RUN echo "Hello from Docksmith"
-CMD ["python", "main.py"]
+CMD ["python3", "-m", "streamlit", "run", "main.py", "--server.port=8501", "--server.address=0.0.0.0"]
