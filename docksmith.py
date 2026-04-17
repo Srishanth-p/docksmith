@@ -39,11 +39,26 @@ def interactive_shell():
 
         elif command == "run":
             if len(parts) < 2:
-                print("Usage: run <image:tag>")
-            elif ":" not in parts[1]:
+                print("Usage: run [-e KEY=VALUE] <image:tag>")
+                continue
+
+            env_override = []
+            image = None
+
+            i = 1
+            while i < len(parts):
+                if parts[i] == "-e":
+                    env_override.append(parts[i + 1])
+                    i += 2
+                else:
+                    image = parts[i]
+                    i += 1
+
+            if image is None or ":" not in image:
                 print("Error: Image must be in format name:tag")
-            else:
-                run_container(parts[1])
+                continue
+
+            run_container(image, env_override)
         
         elif command == "ps":
             from runtime.container_manager import list_containers

@@ -24,6 +24,20 @@ CACHE_FILE = os.path.expanduser("~/.docksmith/cache/index.json")
 # -------------------------
 # Docksmithfile Parser
 # -------------------------
+
+def hash_directory(path):
+    import hashlib
+    sha = hashlib.sha256()
+
+    for root, _, files in os.walk(path):
+        for f in sorted(files):
+            file_path = os.path.join(root, f)
+
+            with open(file_path, "rb") as file:
+                sha.update(file.read())
+
+    return sha.hexdigest()
+
 def parse_docksmithfile(path):
     instructions = []
 
@@ -59,8 +73,8 @@ def save_cache(cache):
         json.dump(cache, f, indent=2)
 
 
-def compute_cache_key(prev_digest, instruction, workdir):
-    data = prev_digest + instruction + workdir
+def compute_cache_key(prev_digest, instruction):
+    data = prev_digest + instruction
     return hashlib.sha256(data.encode()).hexdigest()
 
 
@@ -127,7 +141,8 @@ def handle_copy(value, context, rootfs, manifest, cache, prev_digest):
     # -------------------------
     instruction = f"COPY {value}"
 
-    cache_key = prev_digest + instruction
+    dir_hash = hash_directory(abs_src)
+    cache_key = prev_digest + instruction + dir_hash
 
     if cache_key in cache:
         print(f"{instruction} [CACHE HIT]")
@@ -163,7 +178,7 @@ def handle_copy(value, context, rootfs, manifest, cache, prev_digest):
 def handle_run(command, rootfs, manifest, cache, prev_digest):
 
     instruction = f"RUN {command}"
-    cache_key = compute_cache_key(prev_digest, instruction, rootfs)
+    cache_key = compute_cache_key(prev_digest, instruction)
 
     if cache_key in cache:
         print(f"{instruction} [CACHE HIT]")

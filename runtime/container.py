@@ -25,7 +25,7 @@ def build_rootfs(manifest):
 
     return rootfs
 
-def run_container(image):
+def run_container(image, extra_env=None):
 
     name, tag = image.split(":")
 
@@ -48,6 +48,11 @@ def run_container(image):
     for e in env_list:
         key, value = e.split("=", 1)
         env[key] = value
+    
+    if extra_env:
+        for e in extra_env:
+            key, value = e.split("=", 1)
+            env[key] = value
 
     print(f"\nRunning container: {image}\n")
 
@@ -63,17 +68,28 @@ def run_container(image):
         try:
             print("Running inside isolated environment...\n")
 
+            # Build correct working directory
+            cwd = os.path.join(rootfs, workdir.lstrip("/"))
+
             # Fix command paths
             fixed_cmd = []
+
             for part in cmd:
                 if part.endswith(".py"):
-                    fixed_cmd.append(os.path.join(rootfs, workdir.lstrip("/"), part))
+                    fixed_cmd.append(os.path.join(cwd, part))
                 else:
                     fixed_cmd.append(part)
 
+            # 🔥 FORCE Python interpreter (this is the key fix)
+            if fixed_cmd[0] == "python3":
+                fixed_cmd[0] = sys.executable
+
+            # DEBUG (optional - you can remove later)
+            print("Executing:", fixed_cmd)
+
             subprocess.run(
                 fixed_cmd,
-                cwd=abs_workdir,
+                cwd=cwd,
                 env=env
             )
 

@@ -205,20 +205,26 @@ def list_images():
 
 
 def remove_image(name, tag):
+    filename = name + "_" + tag + ".json"
+    image_file = os.path.join(IMAGES_DIR, filename)
 
+    # 🔴 Check if image exists
+    if not os.path.exists(image_file):
+        print(f"Error: Image {name}:{tag} not found")
+        return
+
+    # Load manifest
     manifest = load_manifest(name, tag)
 
+    # Delete layers
     for layer in manifest["layers"]:
-
         digest = layer["digest"].replace("sha256:", "")
-
         path = os.path.join(LAYERS_DIR, "sha256_" + digest + ".tar")
 
         if os.path.exists(path):
             os.remove(path)
 
-    image_file = os.path.join(IMAGES_DIR, name + "_" + tag + ".json")
+    # Delete manifest file
+    os.remove(image_file)
 
-    if os.path.exists(image_file):
-        os.remove(image_file)
-
+    print(f"Removed image {name}:{tag}")
